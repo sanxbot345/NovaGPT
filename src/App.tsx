@@ -863,7 +863,7 @@ export default function App() {
         )}
       >
         <div className={cn(
-          "flex flex-col h-full p-5 w-64 shrink-0 transition-opacity duration-200",
+          "flex flex-col h-full p-5 pt-[calc(1.25rem_+_max(env(safe-area-inset-top),_0rem))] w-64 shrink-0 transition-opacity duration-200",
           !isSidebarOpen && "opacity-0 pointer-events-none"
         )}>
           
@@ -926,7 +926,7 @@ export default function App() {
 
 
           {/* Profile Area */}
-          <div className="pt-4 border-t border-zinc-800/80 mt-auto">
+          <div className="pt-4 pb-[max(env(safe-area-inset-bottom),_0.5rem)] border-t border-zinc-800/80 mt-auto">
             {authLoading ? (
               <div className="flex items-center gap-3 p-2 animate-pulse">
                 <div className="w-8 h-8 rounded-full bg-zinc-850" />
@@ -996,7 +996,7 @@ export default function App() {
       <main className="flex-1 flex flex-col h-full min-h-0 max-w-full bg-transparent relative z-10">
         
         {/* Header with Close / Open toggle, borderless and with stronger blur effect */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-6 bg-[#09090B]/30 backdrop-blur-xl z-10 select-none">
+        <header className="pt-[max(env(safe-area-inset-top),_0rem)] h-[calc(4rem_+_max(env(safe-area-inset-top),_0rem))] flex items-center justify-between px-4 sm:px-6 bg-[#09090B]/30 backdrop-blur-xl z-10 select-none">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -1023,7 +1023,7 @@ export default function App() {
             
             {/* Show Welcome screen if no messages have been sent */}
             {messages.length === 0 && (
-              <div className="text-center pt-20 pb-6 px-4 flex flex-col items-center">
+              <div className="text-center pt-8 sm:pt-20 pb-6 px-4 flex flex-col items-center">
                 <div className="w-16 h-16 flex items-center justify-center mb-5 animate-pulse">
                   <img src="/img/10201-removebg-preview.png" alt="NovaGPT Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
@@ -1229,7 +1229,7 @@ export default function App() {
         </div>
 
         {/* Input area */}
-        <div className="p-4 sm:p-6 bg-transparent">
+        <div className="p-4 pb-[calc(1rem_+_max(env(safe-area-inset-bottom),_0rem))] sm:p-6 bg-transparent">
           <div className="max-w-2xl mx-auto">
             
             {/* Visual preview of currently queued/attached files */}
