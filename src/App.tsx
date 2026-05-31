@@ -926,7 +926,7 @@ export default function App() {
 
 
           {/* Profile Area */}
-          <div className="pt-4 pb-[max(env(safe-area-inset-bottom),_0.5rem)] border-t border-zinc-800/80 mt-auto">
+          <div className="pt-4 pb-[max(env(safe-area-inset-bottom),_0.5rem)] border-t border-zinc-800/80">
             {authLoading ? (
               <div className="flex items-center gap-3 p-2 animate-pulse">
                 <div className="w-8 h-8 rounded-full bg-zinc-850" />
@@ -1028,7 +1028,7 @@ export default function App() {
                   <img src="/img/10201-removebg-preview.png" alt="NovaGPT Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-zinc-100">NovaGPT</h1>
-                <p className="text-zinc-500 text-xs sm:text-sm max-w-md leading-relaxed">
+                <p className="text-zinc-500 text-xs sm:text-sm max-w-md leading-relaxed mb-1">
                   Asisten cerdas interaktif bertenaga AI. Ketik pesan Anda di bawah dan mulai berkonsultasi secara instan.
                 </p>
               </div>
@@ -1802,7 +1802,6 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
