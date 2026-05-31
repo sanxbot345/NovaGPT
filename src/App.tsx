@@ -746,7 +746,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#09090B] text-zinc-100 font-sans overflow-hidden relative">
+    <div className="flex h-[100dvh] bg-[#09090B] text-zinc-100 font-sans overflow-hidden relative">
 
       {/* Loading Screen Overlay - Premium, modern and highly aesthetic design */}
       <AnimatePresence>
@@ -977,7 +977,7 @@ export default function App() {
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col h-screen max-w-full bg-transparent relative z-10">
+      <main className="flex-1 flex flex-col h-full min-h-0 max-w-full bg-transparent relative z-10">
         
         {/* Header with Close / Open toggle, borderless and with stronger blur effect */}
         <header className="h-16 flex items-center justify-between px-4 sm:px-6 bg-[#09090B]/30 backdrop-blur-xl z-10 select-none">

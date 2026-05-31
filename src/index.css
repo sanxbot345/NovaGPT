@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 /* Disable selection for all elements except inputs and textareas */
 *:not(input):not(textarea) {
   -webkit-user-select: none !important;

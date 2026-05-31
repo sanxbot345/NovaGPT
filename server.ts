@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -110,10 +110,17 @@ app.post('/api/chat', async (req, res) => {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           console.log(`Menghubungi Gemini model "${modelName}" (Percobaan ${attempt}/${maxAttempts})...`);
+          
+          // Only pass thinkingConfig for Gemini 3 series models
+          const requestConfig = { ...config };
+          if (requestConfig.thinkingConfig && !modelName.startsWith('gemini-3')) {
+            delete requestConfig.thinkingConfig;
+          }
+
           const res = await ai.models.generateContent({
             model: modelName,
             contents: contents,
-            config: config
+            config: requestConfig
           });
           return res;
         } catch (err: any) {
