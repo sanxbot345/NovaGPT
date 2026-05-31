@@ -344,6 +344,16 @@ export default function App() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Server Status State for Node.js Express Backend
   const [serverStatus, setServerStatus] = useState<{
@@ -840,10 +850,16 @@ export default function App() {
       </AnimatePresence>
       
       {/* Sidebar - starts CLOSED with smooth transition classes */}
-      <aside
+      <motion.aside
+        initial={false}
+        animate={{
+          width: isSidebarOpen ? 256 : 0,
+          x: isSidebarOpen ? 0 : (isMobile ? -256 : 0),
+        }}
+        transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
         className={cn(
-          "fixed inset-y-0 left-0 z-30 flex flex-col bg-[#121214]/90 backdrop-blur-md border-r border-zinc-800/80 transition-all duration-300 ease-in-out md:relative h-full overflow-hidden",
-          isSidebarOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full md:w-0 md:-translate-x-full"
+          "fixed inset-y-0 left-0 z-30 flex flex-col bg-[#121214]/90 backdrop-blur-md h-full overflow-hidden md:relative",
+          isSidebarOpen ? "border-r border-zinc-800/80" : "border-r-0 border-transparent"
         )}
       >
         <div className={cn(
@@ -974,7 +990,7 @@ export default function App() {
           </div>
 
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main Container */}
       <main className="flex-1 flex flex-col h-full min-h-0 max-w-full bg-transparent relative z-10">
@@ -996,8 +1012,8 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-zinc-500">Connected to Gemini API</span>
+          <div>
+            {/* Connected indicator removed */}
           </div>
         </header>
 
@@ -1447,12 +1463,18 @@ export default function App() {
       </main>
 
       {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm cursor-pointer"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Auth Error Guidance Prompt Modal */}
       <AnimatePresence>
