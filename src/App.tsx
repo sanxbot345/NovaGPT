@@ -5,6 +5,8 @@ import { Typewriter } from './components/Typewriter';
 import { MarkdownRenderer } from './components/MarkdownRenderer';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, Cloud, ShieldCheck, History, Sparkles, X, ExternalLink, AlertCircle, Mail, Lock, Eye, EyeOff, User, ArrowLeft } from 'lucide-react';
+import { CyberBackground } from './components/CyberBackground';
+import { CyberLogo, CyberLogoDefs } from './components/CyberLogo';
 
 // Firebase imports
 import { auth, googleProvider, handleFirestoreError, OperationType, db } from './lib/firebase';
@@ -15,7 +17,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  updateProfile
+  updateProfile,
+  signInAnonymously
 } from 'firebase/auth';
 import { doc, setDoc, deleteDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
@@ -105,6 +108,31 @@ export default function App() {
           `⚠️ Gagal masuk: ${error?.message || 'Kesalahan tidak diketahui.'}\n\nSaran: Cobalah buka aplikasi di tab baru di pojok kanan atas preview lalu masuk kembali.`
         );
       }
+    }
+  };
+
+  // Guest bypass login using Firebase Anonymous Auth with an automated fallback
+  const handleGuestLogin = async () => {
+    setAuthError(null);
+    setAuthSuccessMessage(null);
+    setAuthSubmitting(true);
+    try {
+      await signInAnonymously(auth);
+    } catch (error: any) {
+      console.warn('Anonymous login error, falling back to local simulation:', error);
+      // Fallback: If anonymous auth is disabled/failed, simulate a Guest user locally in state
+      const mockUser = {
+        uid: 'guest_' + Math.random().toString(36).substring(2, 11),
+        email: 'guest@gamenovaid.com',
+        displayName: 'Operator Guest',
+        isMock: true,
+        photoURL: null
+      };
+      setUser(mockUser);
+      setAuthLoading(false);
+      setIsLoginMenuOpen(false);
+    } finally {
+      setAuthSubmitting(false);
     }
   };
 
@@ -305,7 +333,7 @@ export default function App() {
 
   // Effect: Real-time Firestore sync of chat sessions when logged in
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.isMock) return;
     
     const sessionsRef = collection(db, 'users', user.uid, 'sessions');
     const q = query(sessionsRef, orderBy('createdAt', 'desc'));
@@ -325,7 +353,7 @@ export default function App() {
 
   // Effect: Load local guest sessions when logged out
   useEffect(() => {
-    if (!user) {
+    if (!user || user.isMock) {
       try {
         const stored = localStorage.getItem('novagpt_sessions');
         setSessions(stored ? JSON.parse(stored) : []);
@@ -595,7 +623,7 @@ export default function App() {
         createdAt: Date.now(),
       };
 
-      if (user) {
+      if (user && !user.isMock) {
         await saveSessionToFirestore(user.uid, newSession);
         // also push to parent payload for currentMessage mapping below
         updatedSessions = [newSession, ...updatedSessions];
@@ -608,7 +636,7 @@ export default function App() {
       setMessages([userMessage]);
     } else {
       // Append message to existing session
-      if (user) {
+      if (user && !user.isMock) {
         const existingSession = sessions.find(s => s.id === currentSessionId);
         if (existingSession) {
           const updatedSession = { ...existingSession, messages: [...existingSession.messages, userMessage] };
@@ -685,7 +713,7 @@ export default function App() {
       };
 
       // Set state and sync with local sessions list
-      if (user) {
+      if (user && !user.isMock) {
         const existingSession = sessions.find(s => s.id === currentSessionId);
         if (existingSession) {
           const updatedSession = { ...existingSession, messages: [...existingSession.messages, assistantMessage] };
@@ -709,7 +737,7 @@ export default function App() {
         content: error?.message || 'Maaf, terjadi kesalahan saat menyambung ke server. Harap periksa koneksi internet Anda atau coba lagi.',
       };
 
-      if (user) {
+      if (user && !user.isMock) {
         const existingSession = sessions.find(s => s.id === currentSessionId);
         if (existingSession) {
           const updatedSession = { ...existingSession, messages: [...existingSession.messages, errorMessage] };
@@ -743,7 +771,7 @@ export default function App() {
 
   const deleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (user) {
+    if (user && !user.isMock) {
       await deleteSessionFromFirestore(user.uid, sessionId);
     } else {
       const updated = sessions.filter(s => s.id !== sessionId);
@@ -757,6 +785,7 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] bg-[#09090B] text-zinc-100 font-sans overflow-hidden relative">
+      <CyberLogoDefs />
 
       {/* Loading Screen Overlay - Premium, modern and highly aesthetic design */}
       <AnimatePresence>
@@ -849,8 +878,12 @@ export default function App() {
         )}
       </AnimatePresence>
       
-      {/* Sidebar - starts CLOSED with smooth transition classes */}
-      <motion.aside
+      {/* Conditionally render main dashboard if user is authenticated, else render Cyberpunk login page */}
+      {!showLoadingState && (
+        user ? (
+          <>
+            {/* Sidebar - starts CLOSED with smooth transition classes */}
+            <motion.aside
         initial={false}
         animate={{
           width: isSidebarOpen ? 256 : 0,
@@ -1472,9 +1505,304 @@ export default function App() {
             transition={{ duration: 0.25 }}
             className="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm cursor-pointer"
             onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+                />
+              )}
+            </AnimatePresence>
+          </>
+        ) : (
+          /* Render Fullscreen Cyberpunk Login/Registration System directly as entry point */
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-3 sm:p-4 bg-black/98 backdrop-blur-xl overflow-y-auto" id="login-landing-screen">
+            {/* Dynamic particles and drop rain background */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <CyberBackground />
+            </div>
+
+            {/* Modal Box - Custom Cyberpunk Glowing Card */}
+            <motion.div
+              initial={{ scale: 0.95, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0.1 }}
+              className="relative w-full max-w-[430px] bg-[#0c0612]/92 text-white rounded-3xl p-6 sm:p-8 border border-[#ff003c]/25 backdrop-blur-2xl shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(255,0,60,0.15)] z-10 flex flex-col items-center my-auto"
+              id="login-portal-card"
+            >
+              {/* Premium Corner Neon Accents */}
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#00F7FF] rounded-tl-3xl pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#FF003C] rounded-br-3xl pointer-events-none" />
+
+              {/* Header section with Custom Cyber Logo & Float Animation */}
+              <div className="flex flex-col items-center text-center mt-2 mb-6 select-none w-full">
+                <div className="relative w-20 h-20 mb-3 select-none animate-float-logo">
+                  <CyberLogo className="w-20 h-20" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#ff003c] to-[#00f7ff] tracking-widest font-cyber uppercase">
+                  {authFormMode === 'login' ? 'NovaGPTX' : authFormMode === 'register' ? 'Otorisasi Node' : 'Setel Ulang'}
+                </h3>
+                <p className="text-[9px] text-[#a5a5b5] font-mono tracking-[1.5px] uppercase mt-1">
+                  {authFormMode === 'login' ? 'Secure AI Authentication System' : authFormMode === 'register' ? 'Registrasi Identitas Kognitif Baru' : 'Sandi Pemulihan Komputasi'}
+                </p>
+              </div>
+
+              {/* Dynamic Authentication Form (Email/Password) */}
+              <form 
+                onSubmit={
+                  authFormMode === 'login' 
+                    ? handleEmailLogin 
+                    : authFormMode === 'register' 
+                      ? handleEmailRegister 
+                      : handleForgotPassword
+                } 
+                className="w-full flex flex-col gap-4"
+              >
+                {/* Full name input for signup */}
+                {authFormMode === 'register' && (
+                  <div className="flex flex-col gap-1.5 text-left">
+                    <label className="text-[10px] font-bold text-[#FF003C] tracking-widest uppercase font-cyber font-semibold">Nama Lengkap</label>
+                    <div className="relative flex items-center group">
+                      <User className="absolute left-3.5 w-4 h-4 text-[#755565] transition-colors group-focus-within:text-[#00F7FF]" />
+                      <input
+                        type="text"
+                        required
+                        value={loginName}
+                        onChange={(e) => setLoginName(e.target.value)}
+                        placeholder="Nama Lengkap Operator"
+                        className="w-full pl-10 pr-4 py-3 bg-[#040206]/95 border border-[#ff003c]/20 hover:border-[#ff003c]/40 focus:border-[#00F7FF] focus:ring-1 focus:ring-[#00f7ff]/30 rounded-xl text-white text-xs placeholder-[#755565] outline-none transition-all font-mono tracking-wider"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Email Address Input */}
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-[10px] font-bold text-[#FF003C] tracking-widest uppercase font-cyber font-semibold">Alamat Email</label>
+                  <div className="relative flex items-center group">
+                    <Mail className="absolute left-3.5 w-4 h-4 text-[#755565] transition-colors group-focus-within:text-[#00F7FF]" />
+                    <input
+                      type="email"
+                      required
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="name@novagptx.ai"
+                      className="w-full pl-10 pr-4 py-3 bg-[#040206]/95 border border-[#ff003c]/20 hover:border-[#ff003c]/40 focus:border-[#00F7FF] focus:ring-1 focus:ring-[#00f7ff]/30 rounded-xl text-white text-xs placeholder-[#755565] outline-none transition-all font-mono tracking-wider"
+                    />
+                  </div>
+                </div>
+
+                {/* Password Input (for Login / Signup) */}
+                {authFormMode !== 'forgot' && (
+                  <div className="flex flex-col gap-1.5 text-left">
+                    <label className="text-[10px] font-bold text-[#FF003C] tracking-widest uppercase font-cyber font-semibold">Kata Sandi</label>
+                    <div className="relative flex items-center group">
+                      <Lock className="absolute left-3.5 w-4 h-4 text-[#755565] transition-colors group-focus-within:text-[#00F7FF]" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full pl-10 pr-10 py-3 bg-[#040206]/95 border border-[#ff003c]/20 hover:border-[#ff003c]/40 focus:border-[#00F7FF] focus:ring-1 focus:ring-[#00f7ff]/30 rounded-xl text-white text-xs placeholder-[#755565] outline-none transition-all font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 p-1 text-[#755565] hover:text-white transition-colors cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Option line (Remember me + forgot password link) only on sign in */}
+                {authFormMode === 'login' && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-zinc-400 font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-4 h-4 rounded border-[#ff003c]/35 bg-black text-[#ff003c]/85 focus:ring-[#ff003c]/50 accent-[#ff003c]"
+                      />
+                      Remember Me
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthError(null);
+                        setAuthSuccessMessage(null);
+                        setAuthFormMode('forgot');
+                      }}
+                      className="text-[#00F7FF] hover:text-white font-mono tracking-wider transition-all hover:text-shadow-[0_0_8px_#00F7FF]"
+                    >
+                      Lupa Password?
+                    </button>
+                  </div>
+                )}
+
+                {/* Accept Terms for Signup */}
+                {authFormMode === 'register' && (
+                  <div className="flex items-center gap-2.5 text-left mb-1">
+                    <input
+                      type="checkbox"
+                      id="regTermsConsent"
+                      required
+                      className="w-4 h-4 rounded border-[#ff003c]/30 bg-black text-[#ff003c]/80 focus:ring-[#ff003c]/55 accent-[#ff003c] cursor-pointer"
+                    />
+                    <label htmlFor="regTermsConsent" className="text-[10px] text-zinc-400 font-mono cursor-pointer select-none">
+                      Setuju dengan Ketentuan Node Kuantum
+                    </label>
+                  </div>
+                )}
+
+                {/* Dynamic status/error alerting */}
+                {authError && (
+                  <div className="bg-[#ff003c]/10 border border-[#ff003c]/35 text-[#ff4f76] text-[10px] rounded-xl p-3 text-left font-mono leading-relaxed select-none">
+                    {authError}
+                  </div>
+                )}
+                {authSuccessMessage && (
+                  <div className="bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 text-[10px] rounded-xl p-3 text-left font-mono leading-relaxed select-none">
+                    {authSuccessMessage}
+                  </div>
+                )}
+
+                {/* Cyber Action Button */}
+                <button
+                  type="submit"
+                  disabled={authSubmitting}
+                  className="w-full mt-2.5 py-3 bg-transparent border border-[#ff003c] hover:bg-[#ff003c]/12 text-white font-cyber font-bold rounded-xl text-xs sm:text-xs tracking-widest uppercase transition-all duration-300 relative overflow-hidden flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(255,0,60,0.15)] hover:shadow-[0_0_25px_rgba(255,0,60,0.35)] active:scale-[0.98] disabled:opacity-50 font-semibold"
+                >
+                  {authSubmitting ? (
+                    <div className="w-4 h-4 border-2 border-white/35 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>{authFormMode === 'login' ? 'Otorisasi Akses' : authFormMode === 'register' ? 'Daftarkan Node' : 'Reset Password'}</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Masuk Instan (Tamu / Bypass) */}
+                {authFormMode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={handleGuestLogin}
+                    disabled={authSubmitting}
+                    className="w-full mt-2.5 py-3 bg-[#00F7FF]/10 hover:bg-[#00F7FF]/22 border border-[#00F7FF]/35 hover:border-[#00F7FF]/65 text-[#00F7FF] font-cyber font-bold rounded-xl text-xs sm:text-xs tracking-widest uppercase transition-all duration-300 relative overflow-hidden flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(0,247,255,0.1)] hover:shadow-[0_0_25px_rgba(0,247,255,0.3)] active:scale-[0.98] disabled:opacity-50 font-semibold"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#00F7FF] animate-pulse" />
+                    <span>Masuk Instan (Akun Tamu / Bypass)</span>
+                  </button>
+                )}
+              </form>
+
+              {/* Social Login SSO integration */}
+              {authFormMode === 'login' && (
+                <>
+                  <div className="flex items-center my-4 w-full select-none justify-center gap-3">
+                    <div className="flex-1 border-b border-dashed border-[#ff003c]/15"></div>
+                    <span className="text-[10px] text-[#755565] font-mono tracking-wider">OR CONTINUE WITH</span>
+                    <div className="flex-1 border-b border-dashed border-[#ff003c]/15"></div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 w-full">
+                    <button
+                      type="button"
+                      onClick={handleLogin}
+                      className="flex items-center justify-center py-2.5 bg-[#0c040c]/70 border border-[#ff003c]/10 hover:border-[#ff003c]/35 rounded-xl cursor-pointer text-[#755565] hover:text-[#ea4335] transition-all hover:text-shadow-[0_0_8px_rgba(234,67,53,0.3)] hover:bg-[#ff003c]/12"
+                      title="Masuk via Google"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 2.192 15.34 1 12.24 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.478 0 10.793-4.537 10.793-10.986 0-.743-.08-1.3-.176-1.854H12.24z"/>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthError('OAuth GitHub Node dapat diaktifkan di Firebase Console Anda.');
+                      }}
+                      className="flex items-center justify-center py-2.5 bg-[#0c040c]/70 border border-[#ff003c]/10 hover:border-[#ff003c]/35 rounded-xl cursor-pointer text-[#755565] hover:text-white transition-all hover:text-shadow-[0_0_8px_white] hover:bg-[#ff003c]/12"
+                      title="Masuk via GitHub"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthError('OAuth Discord Node dapat diaktifkan di Firebase Console Anda.');
+                      }}
+                      className="flex items-center justify-center py-2.5 bg-[#0c040c]/70 border border-[#ff003c]/10 hover:border-[#ff003c]/35 rounded-xl cursor-pointer text-[#755565] hover:text-[#5865f2] transition-all hover:text-shadow-[0_0_8px_rgba(88,101,242,0.3)] hover:bg-[#ff003c]/12"
+                      title="Masuk via Discord"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.094 13.094 0 0 1-1.873-.894.077.077 0 0 1-.008-.128c.126-.093.252-.19.372-.287a.075.075 0 0 1 .077-.011c3.92 1.793 8.18 1.793 12.061 0a.073.073 0 0 1 .078.009c.12.099.246.195.373.289a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.156 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.156 2.418z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Bottom toggle state switch link logic */}
+              <div className="mt-6 text-xs text-zinc-400 font-sans select-none">
+                {authFormMode === 'login' ? (
+                  <p>
+                    Belum memiliki akses?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthError(null);
+                        setAuthSuccessMessage(null);
+                        setAuthFormMode('register');
+                      }}
+                      className="text-[#00F7FF] hover:text-white font-bold cursor-pointer transition-colors"
+                    >
+                      Registrasi Node Baru
+                    </button>
+                  </p>
+                ) : authFormMode === 'register' ? (
+                  <p>
+                    Sudah terdaftar?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthError(null);
+                        setAuthSuccessMessage(null);
+                        setAuthFormMode('login');
+                      }}
+                      className="text-[#00F7FF] hover:text-white font-bold cursor-pointer transition-colors"
+                    >
+                      Masuk Frame Kerja
+                    </button>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthError(null);
+                      setAuthSuccessMessage(null);
+                      setAuthFormMode('login');
+                    }}
+                    className="flex items-center gap-1.5 text-[#00F7FF] hover:text-white font-bold cursor-pointer mx-auto transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Kembali ke Login</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Friendly notification info about popup blocker issues inside iframes */}
+              {authFormMode === 'login' && (
+                <div className="bg-zinc-950/60 border border-[#ff003c]/15 rounded-xl p-3 flex items-start gap-2.5 mt-5 text-left select-none">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-550 shrink-0 mt-0.5" />
+                  <p className="text-[9px] leading-normal text-zinc-400 font-mono">
+                    <strong className="text-[#00F7FF]">IFRAME PROTOCOL:</strong> Jika pop-up Google terblokir browser, klik tombol <strong className="text-white">panah kanan atas</strong> untuk meluncurkan di tab mandiri.
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )
+      )}
 
       {/* Auth Error Guidance Prompt Modal */}
       <AnimatePresence>
@@ -1531,277 +1859,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Login Menu Portal Modal and Guidance Interface */}
-      <AnimatePresence>
-        {isLoginMenuOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl" id="login-portal-modal">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsLoginMenuOpen(false)}
-              className="absolute inset-0 bg-black/55 cursor-pointer"
-              id="login-portal-backdrop"
-            />
-
-            {/* Modal Box (Polished White Card with high contrast against the Black screen background) */}
-            <motion.div
-              initial={{ scale: 0.95, y: 20, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.95, y: 20, opacity: 0 }}
-              transition={{ type: "spring", duration: 0.45, bounce: 0.15 }}
-              className="relative w-full max-w-[380px] bg-white text-zinc-850 rounded-3xl overflow-hidden shadow-2xl z-10 flex flex-col items-center p-6 sm:p-7 border border-zinc-100"
-              id="login-portal-card"
-            >
-              {/* Close Button on White Card */}
-              <button
-                type="button"
-                onClick={() => setIsLoginMenuOpen(false)}
-                className="absolute top-4 right-4 p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-full transition-all cursor-pointer border border-zinc-100"
-                title="Tutup"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Header section with Custom Image Icon from img folder with black background */}
-              <div className="flex flex-col items-center text-center mt-3 mb-5 select-none w-full">
-                <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center p-1 border border-zinc-900 shadow-inner mb-4 overflow-hidden relative group">
-                  <img 
-                    src="/img/10201-removebg-preview.png" 
-                    alt="User Custom Avatar" 
-                    className="w-14 h-14 object-contain transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      // Fallback in case of missing asset
-                      e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-                    }}
-                  />
-                </div>
-                <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight font-sans">
-                  {authFormMode === 'login' ? 'Welcome Back' : authFormMode === 'register' ? 'Buat Akun Baru' : 'Lupa Password?'}
-                </h3>
-                <p className="text-xs text-zinc-400 mt-1 max-w-xs leading-normal font-sans">
-                  {authFormMode === 'login' ? 'Silakan login untuk melanjutkan' : authFormMode === 'register' ? 'Daftar akun baru Anda dalam beberapa detik' : 'Masukkan email Anda untuk menyetel ulang kata sandi'}
-                </p>
-              </div>
-
-              {/* Dynamic Authentication Form (Email/Password) */}
-              <form 
-                onSubmit={
-                  authFormMode === 'login' 
-                    ? handleEmailLogin 
-                    : authFormMode === 'register' 
-                      ? handleEmailRegister 
-                      : handleForgotPassword
-                } 
-                className="w-full flex flex-col gap-3.5 font-sans"
-              >
-                {/* Full name input for signup */}
-                {authFormMode === 'register' && (
-                  <div className="relative flex items-center">
-                    <User className="absolute left-3.5 w-4.5 h-4.5 text-zinc-400" />
-                    <input
-                      type="text"
-                      required
-                      value={loginName}
-                      onChange={(e) => setLoginName(e.target.value)}
-                      placeholder="Nama Lengkap"
-                      className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-zinc-800 text-sm placeholder-zinc-400 outline-none transition-all font-medium"
-                    />
-                  </div>
-                )}
-
-                {/* Email Address Input */}
-                <div className="relative flex items-center">
-                  <Mail className="absolute left-3.5 w-4.5 h-4.5 text-zinc-400" />
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="Email Address"
-                    className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-zinc-800 text-sm placeholder-zinc-400 outline-none transition-all font-medium"
-                  />
-                </div>
-
-                {/* Password Input (for Login / Signup) */}
-                {authFormMode !== 'forgot' && (
-                  <div className="relative flex items-center">
-                    <Lock className="absolute left-3.5 w-4.5 h-4.5 text-zinc-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="Password"
-                      className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-zinc-800 text-sm placeholder-zinc-400 outline-none transition-all font-medium"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 p-1 text-zinc-400 hover:text-zinc-650 transition-colors cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                )}
-
-                {/* Additional Option line (Remember me + forgot password link) only on sign in */}
-                {authFormMode === 'login' && (
-                  <div className="flex items-center justify-between text-[11px] sm:text-xs">
-                    <label className="flex items-center gap-2 cursor-pointer select-none text-zinc-500 font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="w-4 h-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                      Remember Me
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthError(null);
-                        setAuthSuccessMessage(null);
-                        setAuthFormMode('forgot');
-                      }}
-                      className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors cursor-pointer"
-                    >
-                      Lupa Password?
-                    </button>
-                  </div>
-                )}
-
-                {/* Dynamic status/error alerting */}
-                {authError && (
-                  <div className="bg-red-50 border border-red-100 text-red-650 text-[11px] rounded-xl p-3 text-left leading-relaxed select-none">
-                    {authError}
-                  </div>
-                )}
-                {authSuccessMessage && (
-                  <div className="bg-emerald-50 border border-emerald-100 text-emerald-650 text-[11px] rounded-xl p-3 text-left leading-relaxed select-none">
-                    {authSuccessMessage}
-                  </div>
-                )}
-
-                {/* Custom Styled Submit Button with Sign-In arrow icon (matching screenshot) */}
-                <button
-                  type="submit"
-                  disabled={authSubmitting}
-                  className="w-full mt-2.5 py-3 bg-[#5a52e6] hover:bg-[#4941d4] text-white font-bold rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {authSubmitting ? (
-                    <span className="w-4.5 h-4.5 border-2 border-white/35 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    <>
-                      <LogIn className="w-4.5 h-4.5" />
-                      <span>{authFormMode === 'login' ? 'Login' : authFormMode === 'register' ? 'Daftar' : 'Reset Password'}</span>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Divider (or/atau separator, only in Login mode) */}
-              {authFormMode === 'login' && (
-                <>
-                  <div className="flex items-center my-4 w-full select-none">
-                    <div className="flex-1 border-t border-zinc-150"></div>
-                    <span className="px-3 text-xs text-zinc-400 font-semibold tracking-wide">atau</span>
-                    <div className="flex-1 border-t border-zinc-150"></div>
-                  </div>
-
-                  {/* Google Custom SSO Button (Styled as white button with Google icon) */}
-                  <button
-                    type="button"
-                    onClick={handleLogin}
-                    className="w-full py-2.5 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-bold rounded-xl text-xs sm:text-xs transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.98]"
-                  >
-                    <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path
-                          fill="#4285F4"
-                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                        />
-                      </svg>
-                    </div>
-                    <span>Login dengan Google</span>
-                  </button>
-                </>
-              )}
-
-              {/* Bottom toggle state switch link logic */}
-              <div className="mt-5 text-xs text-zinc-500 font-semibold font-sans select-none">
-                {authFormMode === 'login' ? (
-                  <p>
-                    Belum punya akun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthError(null);
-                        setAuthSuccessMessage(null);
-                        setAuthFormMode('register');
-                      }}
-                      className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer"
-                    >
-                      Daftar Sekarang
-                    </button>
-                  </p>
-                ) : authFormMode === 'register' ? (
-                  <p>
-                    Sudah punya akun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthError(null);
-                        setAuthSuccessMessage(null);
-                        setAuthFormMode('login');
-                      }}
-                      className="text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer"
-                    >
-                      Login
-                    </button>
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthError(null);
-                      setAuthSuccessMessage(null);
-                      setAuthFormMode('login');
-                    }}
-                    className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 font-bold cursor-pointer mx-auto transition-colors"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Kembali ke Login</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Friendly notification info about popup blocker issues inside iframes */}
-              {authFormMode === 'login' && (
-                <div className="bg-amber-50 rounded-xl p-2.5 flex items-start gap-2 mt-4 text-left border border-amber-100 select-none">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[9px] leading-normal text-amber-700">
-                    <strong>Iframe Hint:</strong> Jika tombol Google tidak merespon, buka aplikasi di tab baru lewat tombol panah kanan atas preview.
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Login modal removed in favor of direct fullscreen login landing screen */}
     </div>
   );
 }

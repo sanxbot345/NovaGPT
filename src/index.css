@@ -1,5 +1,52 @@
 @import "tailwindcss";
 
+:root {
+  --neon-cyan: #00F7FF;
+  --neon-pink: #FF00FF;
+  --neon-purple: #8A2BE2;
+  --neon-red: #FF003C;
+  --pure-black: #030305;
+  --card-bg: rgba(8, 4, 10, 0.82);
+  --card-border: rgba(255, 0, 60, 0.25);
+  --font-cyber: 'Orbitron', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+}
+
+@theme {
+  --font-cyber: 'Orbitron', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+  --color-cyber-cyan: #00F7FF;
+  --color-cyber-pink: #FF00FF;
+  --color-cyber-purple: #8A2BE2;
+  --color-cyber-red: #FF003C;
+  --color-pure-black: #030305;
+}
+
+/* CRT scanlines */
+.crt-scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  opacity: 0.25;
+}
+
+/* Float Animation for logo */
+@keyframes floatLogo {
+  0%, 100% { transform: translateY(0px) rotate(0deg); filter: drop-shadow(0 0 12px #FF003C); }
+  50% { transform: translateY(-8px) rotate(2deg); filter: drop-shadow(0 0 15px #00F7FF); }
+}
+.animate-float-logo {
+  animation: floatLogo 5s ease-in-out infinite;
+}
+
 html,
 body,
 #root {

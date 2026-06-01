@@ -1,10 +1,10 @@
 {
-  "projectId": "jovial-continuity-vh7sp",
+  "projectId": "gamenovaid",
   "appId": "1:647540691947:web:1395265947373bf905ffae",
-  "apiKey": "AIzaSyBGfNDtG9rCBdqMPNjMbFcwldlO20WoVMw",
-  "authDomain": "jovial-continuity-vh7sp.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-2a682cdb-a4cf-4991-ba30-35508d2c5475",
-  "storageBucket": "jovial-continuity-vh7sp.firebasestorage.app",
+  "apiKey": "AIzaSyBpGdinJZAHdq2cjXf7yaYSAhdaNLd9w2g",
+  "authDomain": "gamenovaid.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "gamenovaid.firebasestorage.app",
   "messagingSenderId": "647540691947",
   "measurementId": ""
 }

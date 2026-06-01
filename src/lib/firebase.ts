@@ -3,8 +3,12 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+const dbId = (!firebaseConfig.firestoreDatabaseId || (firebaseConfig.firestoreDatabaseId.startsWith('ai-studio-') && firebaseConfig.projectId !== 'jovial-continuity-vh7sp'))
+  ? '(default)'
+  : firebaseConfig.firestoreDatabaseId;
+
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, dbId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
